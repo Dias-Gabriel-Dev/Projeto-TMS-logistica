@@ -1,0 +1,52 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+
+jobs:
+  test-and-build:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # Baixa o código fonte do repositório do runner
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Configura o Node.Js com cache de dependências
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Instala as dependências deterministicamente
+      - name: Instalar Dependências (npm ci)
+        run: npm ci
+
+      # Gera os tipos e o client do prisma
+      - name: Gerar Prisma Client
+        run: npx prisma generate
+
+      # Valida o lint
+      - name: Executar Linter (ESLint)
+        run: npm run lint
+
+      # Executa os testes
+      - name: Executar Testes Automatizados (Jest)
+        run: npm test
+        env:
+          DATABASE_URL: "postgresql://admin:adminpassword@localhost:5432/api_logistica_test?schema=public"
+          JWT_SECRET: "chave_secreta_de_teste_para_ci_pipeline"
+
+      # Compila o TypeScript
+      - name: Compilar TypeScript (npm run build)
+        run: npm run build
+
+      # Valida o Docker build
+      - name: Validar Build da Imagem Docker
+        run: docker build -t api-logistica:latest .

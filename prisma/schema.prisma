@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Status {
+  AVAILABLE
+  IN_TRANSIT
+  DELIVERED
+  PENDING
+}
+
+enum VehicleType {
+  SEDAN
+  HATCH
+  FURGAO
+  CARRETA
+  MOTO
+  VAN
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+}
+
+model User {
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+  role     Role   @default(OPERATOR)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Driver {
+  id            String @id @default(uuid())
+  name          String
+  document      String @unique
+  licenseNumber String @unique
+  status        Status @default(AVAILABLE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries Delivery[]
+
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id             String      @id @default(uuid())
+  plate          String      @unique
+  vehicleType    VehicleType
+  model          String
+  capacityWeight Float
+  status         Status      @default(AVAILABLE)
+  driver         Driver      @relation(fields: [driverId], references: [id])
+  driverId       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries Delivery[]
+}
+
+model Route {
+  id                String @id @default(uuid())
+  origin            String
+  destination       String
+  estimatedDistance Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries Delivery[]
+}
+
+model Delivery {
+  id String @id @default(uuid())
+
+  trackingCode String @unique
+
+  route   Route  @relation(fields: [routeId], references: [id])
+  routeId String
+
+  driver   Driver @relation(fields: [driverId], references: [id])
+  driverId String
+
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  vehicleId String
+
+  cargoWeight Float
+  freightCost Float
+
+  status Status @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  finishedAt DateTime?
+
+  events DeliveryEvent[]
+}
+
+model DeliveryEvent {
+  id         String   @id @default(uuid())
+  delivery   Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  deliveryId String
+
+  status      Status
+  description String
+
+  createdAt DateTime @default(now())
+}
