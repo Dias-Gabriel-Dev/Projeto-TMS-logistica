@@ -1,44 +1,49 @@
-# API Logística
+# API Logística (TMS Local / Last Mile)
 
-API RESTful desenvolvida em Node.js e TypeScript para orquestração e despacho de entregas. O sistema gerencia motoristas, veículos, rotas e entregas, aplicando regras de negócio rigorosas, controle de concorrência e segurança de borda.
+API RESTful desenvolvida em Node.js e TypeScript focada em orquestração de entregas e despacho ágil (modelo Food Delivery / Last Mile). O sistema gerencia entregadores parceiros, rotas, despachos e fornece telemetria analítica com rigorosas regras de negócio, controle de concorrência e segurança de borda.
 
 ## Tecnologias e Arquitetura
 
-- Backend: Node.js (ES Modules) com Express v5 e TypeScript.
+- Backend: Node.js com Express v5 e TypeScript.
 - Banco de Dados: PostgreSQL orquestrado via Prisma ORM 7.
-- Validação de Contratos: Zod para schemas de requisição e tipagem estrita.
-- Arquitetura: Baseada em conceitos de Clean Architecture e Domain-Driven Design (DDD), dividida em camadas lógicas de Transporte (Controllers), Domínio (Services) e Dados (Repositories).
-- Segurança: Autenticação JWT, BcryptJS, Helmet, CORS e Limitação de Taxa (Rate Limit).
-- Infraestrutura: Docker, Docker Compose e pipeline de CI/CD configurada via GitHub Actions.
+- Validação de Contratos: Zod para schemas de requisição e tipagem estrita (Fail-fast).
+- Arquitetura: Baseada em Clean Architecture e Domain-Driven Design (DDD), separando lógicas de Transporte (Controllers), Negócio (Services) e Acesso a Dados (Repositories).
+- Segurança: Autenticação JWT Stateless, BcryptJS, Helmet, CORS e Limitação de Taxa (Rate Limit).
+- Qualidade e TDD: Bateria de testes automatizados com Jest, ESLint estrito e CI/CD via GitHub Actions.
+- Infraestrutura: Docker, Docker Compose, Healthchecks e Graceful Shutdown.
 - Documentação da API: Swagger / OpenAPI 3.0.
 
-## Funcionalidades Principais
+## Funcionalidades Principais e Regras de Negócio
 
-### Gestão de Operadores e Autenticação
+### Autenticação e Autorização (RBAC)
 
-- Criação de usuários (operadores e administradores).
-- Autenticação JWT Stateless.
-- Proteção nativa contra enumeração de contas e mitigação de ataques de força bruta.
+- Criação de usuários (Operadores e Administradores).
+- Segurança baseada em JWT com proteção contra ataques de força bruta e enumeração de contas.
 
-### Gestão Operacional de Frota
+### Gestão Operacional de Entregadores (Couriers)
 
-- Cadastro e manutenção de Motoristas, com validação estrita de documentação (CNH, CPF) e disponibilidade de status.
-- Cadastro e manutenção de Veículos, com amarração de propriedades dimensionais e posse exclusiva de um motorista existente.
-- Transição de estados atômica e simultânea (AVAILABLE vs IN_TRANSIT).
+- Cadastro e manutenção de Entregadores parceiros.
+- Classificação do tipo de transporte operacional (MOTO ou BIKE).
+- Transição de estado de disponibilidade isolada (AVAILABLE vs IN_TRANSIT).
 
-### Orquestração de Entregas (Despacho)
+### Despacho de Entregas e Cálculo de Frete
 
-- Validação de negócio em cascata para criação de despachos (validação de rota, motorista e veículo em uma única requisição).
-- Transações Atômicas implementadas no Prisma para garantir consistência em falhas de rede.
-- Prevenção ativa contra Dupla Alocação (Race Conditions) em ambientes de alta concorrência.
-- Geração de códigos de rastreio de alta entropia.
-- Event Sourcing: Linha do tempo cronológica com o histórico imutável de eventos logísticos de cada pacote.
+- Criação de entregas vinculando Rotas e Entregadores disponíveis.
+- Cálculo de Frete: O custo operacional é automatizado considerando uma taxa base e um multiplicador financeiro sobre a distância estimada da rota.
+- Prevenção de Dupla Alocação: Uso de atualizações condicionais atômicas (TOCTOU lock) no banco de dados para impedir que dois despachantes aloquem o mesmo entregador simultaneamente.
+- Transações Atômicas (ACID): Em caso de falha de validação de disponibilidade durante o despacho, toda a operação sofre rollback automático.
 
-### Resiliência de Aplicação (Cloud Readiness)
+### Rastreamento (Event Sourcing)
 
-- Probes de Liveness e Readiness (Endpoints `/health` e `/health/ready`).
-- Rotina de Graceful Shutdown programada para interromper recebimentos e drenar conexões de banco de dados de forma limpa.
-- Validação estrutural de falha rápida (Fail-Fast) impedindo boot de instâncias com variáveis de ambiente ausentes.
+- Geração de código de rastreamento de alta entropia para acesso de clientes e operadores.
+- Histórico imutável de eventos logísticos. Os pacotes transitam pelos estados PENDING, IN_TRANSIT e DELIVERED, com logs cronológicos garantidos.
+
+### Telemetria e Analytics
+
+- Painel analítico gerado com agregações otimizadas diretamente no PostgreSQL via Prisma.
+- Métricas em tempo real sobre status da frota e disponibilidade operacional.
+- Faturamento total do sistema (Revenue) e métricas de distâncias acumuladas.
+- Ranking de entregadores baseado no volume de entregas concluídas.
 
 ## Instruções de Execução Local
 
@@ -55,17 +60,17 @@ API RESTful desenvolvida em Node.js e TypeScript para orquestração e despacho 
    cp .env.example .env
    ```
 
-   Edite o arquivo `.env` recém-criado, preenchendo as variáveis ausentes (se houver). O ambiente orquestrado consumirá estas variáveis automaticamente.
+   Edite o arquivo `.env` para inserir suas configurações de porta ou credenciais, caso diferem do padrão.
 
 2. Inicialização da Infraestrutura
-   Inicie a construção da imagem Docker da aplicação e o levante do servidor de banco de dados em background:
+   Inicie a construção da imagem Docker da aplicação e levante o servidor de banco de dados em background:
 
    ```bash
    docker compose up --build -d
    ```
 
 3. Sincronização do Banco de Dados
-   Execute a migração de esquemas do Prisma diretamente de dentro do contêiner da aplicação:
+   Execute a migração de esquemas do Prisma dentro do contêiner da aplicação:
 
    ```bash
    docker compose exec api npx prisma db push
@@ -73,5 +78,14 @@ API RESTful desenvolvida em Node.js e TypeScript para orquestração e despacho 
 
 4. Utilização
    A aplicação entrará em estado de escuta nativa na porta configurada.
-   - Acesso base HTTP: `http://localhost:3000`
-   - Documentação de Integração (Swagger UI): `http://localhost:3000/api-docs`
+   - Acesso base HTTP: <http://localhost:3000>
+   - Documentação de Integração (Swagger UI): <http://localhost:3000/api-docs>
+
+## Testes Automatizados
+
+O sistema foi rigorosamente desenvolvido sob a filosofia TDD (Test-Driven Development).
+Para executar toda a suíte de testes unitários e de integração, utilize o comando:
+
+```bash
+npm run test
+```
