@@ -6,7 +6,7 @@ describe('Driver Validation (Zod)', () => {
       name: 'João da Silva',
       document: '12345678901',
       licenseNumber: '12345678901',
-      status: 'AVAILABLE',
+      vehicleType: 'MOTO',
     };
 
     expect(() => driverSchema.parse(validDriver)).not.toThrow();
@@ -16,8 +16,8 @@ describe('Driver Validation (Zod)', () => {
     const invalidDriver = {
       name: 'João',
       document: '12345678901',
-      licenseNumber: '123456789012', // 12 digits
-      status: 'AVAILABLE',
+      licenseNumber: '123456789012',
+      vehicleType: 'MOTO',
     };
 
     expect(() => driverSchema.parse(invalidDriver)).toThrow();
@@ -27,19 +27,19 @@ describe('Driver Validation (Zod)', () => {
     const invalidDriver = {
       name: 'João',
       document: '12345678901',
-      licenseNumber: '123456789AA', // Has letters
-      status: 'AVAILABLE',
+      licenseNumber: '123456789AA',
+      vehicleType: 'MOTO',
     };
 
     expect(() => driverSchema.parse(invalidDriver)).toThrow();
   });
 
-  it('should reject invalid status', () => {
+  it('should reject invalid vehicleType', () => {
     const invalidDriver = {
       name: 'João',
       document: '12345678901',
       licenseNumber: '12345678901',
-      status: 'FLYING', // Not in enum
+      vehicleType: 'CARRO', // Not in enum
     };
 
     expect(() => driverSchema.parse(invalidDriver)).toThrow();

@@ -6,7 +6,7 @@ import { generateTrackingCode } from '../utils/trackingCode.js';
 import { calculateFreight } from '../utils/freight.util.js';
 
 const createDelivery = async (data: CreateDeliveryDTO) => {
-  const { routeId, driverId, vehicleId, cargoWeight } = data;
+  const { routeId, courierId } = data;
 
   const existingRoute = await deliveryRepo.findRouteById(routeId);
 
@@ -14,41 +14,21 @@ const createDelivery = async (data: CreateDeliveryDTO) => {
     throw new AppError('Rota não encontrada', 404);
   }
 
-  const existingDriver = await deliveryRepo.findDriverById(driverId);
+  const existingCourier = await deliveryRepo.findCourierById(courierId);
 
-  if (!existingDriver) {
+  if (!existingCourier) {
     throw new AppError('Motorista não encontrado', 404);
   }
 
-  const existingVehicle = await deliveryRepo.findVehicleById(vehicleId);
+  const freightCost = calculateFreight(existingRoute.estimatedDistance);
 
-  const freightCost = calculateFreight(existingRoute.estimatedDistance, data.cargoWeight);
-
-  if (existingDriver.status !== Status.AVAILABLE) {
+  if (existingCourier.status !== Status.AVAILABLE) {
     throw new AppError('Motorista não está disponível', 404);
-  }
-
-  if (!existingVehicle) {
-    throw new AppError('Veículo não encontrado', 404);
-  }
-
-  if (existingVehicle.status !== Status.AVAILABLE) {
-    throw new AppError('Veículo não está disponível', 404);
-  }
-
-  if (existingVehicle.driverId !== driverId) {
-    throw new AppError('Este veículo não pertence ao motorista selecionado', 400);
-  }
-
-  if (cargoWeight > existingVehicle.capacityWeight) {
-    throw new AppError('Capacidade do veículo excedida', 400);
   }
 
   const txInput: CreateDeliveryTxInput = {
     routeId,
-    driverId,
-    vehicleId,
-    cargoWeight,
+    courierId,
     freightCost,
     trackingCode: generateTrackingCode(),
   };
@@ -58,24 +38,24 @@ const createDelivery = async (data: CreateDeliveryDTO) => {
 };
 
 const getAllDeliveries = async () => {
-  const deliveries = await deliveryRepo.findAll();
+  const deliveries = await deliveryRepo.findAllDeliveries();
   return deliveries;
 };
 
 const getDeliveryById = async (id: string) => {
-  const delivery = await deliveryRepo.findById(id);
+  const delivery = await deliveryRepo.findDeliveryById(id);
   return delivery;
 };
 
 const updateDeliveryStatus = async (id: string, status: string) => {
-  const delivery = await deliveryRepo.findById(id);
+  const delivery = await deliveryRepo.findDeliveryById(id);
 
   await deliveryRepo.updateStatus(id, status as Status);
   return delivery;
 };
 
 const finishDelivery = async (id: string) => {
-  const existingDelivery = await deliveryRepo.findById(id);
+  const existingDelivery = await deliveryRepo.findDeliveryById(id);
 
   if (!existingDelivery) {
     throw new AppError('Entrega não encontrada', 404);
@@ -83,8 +63,7 @@ const finishDelivery = async (id: string) => {
 
   const finishedDelivery = await deliveryRepo.finishWithTransaction(
     existingDelivery.id,
-    existingDelivery.driverId,
-    existingDelivery.vehicleId,
+    existingDelivery.courierId,
   );
 
   return finishedDelivery;

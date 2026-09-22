@@ -1,8 +1,6 @@
 export interface CreateDeliveryDTO {
   routeId: string;
-  driverId: string;
-  vehicleId: string;
-  cargoWeight: number;
+  courierId: string;
 }
 
 export interface CreateDeliveryTxInput extends CreateDeliveryDTO {

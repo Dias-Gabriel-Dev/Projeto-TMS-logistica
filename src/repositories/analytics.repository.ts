@@ -1,7 +1,7 @@
 import { prisma, Status } from '../prisma.js';
 
-export const getDriversCountByStatus = async () => {
-  return prisma.driver.groupBy({
+export const getCouriersCountByStatus = async () => {
+  return prisma.courier.groupBy({
     by: ['status'],
     _count: {
       id: true,
@@ -37,9 +37,9 @@ export const getDeliveriesWithRoutes = async () => {
   });
 };
 
-export const getDriverRanking = async () => {
+export const getCourierRanking = async () => {
   return prisma.delivery.groupBy({
-    by: ['driverId'],
+    by: ['courierId'],
     where: {
       status: Status.DELIVERED,
     },

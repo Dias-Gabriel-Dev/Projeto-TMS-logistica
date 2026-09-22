@@ -6,19 +6,15 @@ export const findRouteById = async (id: string) => {
   return prisma.route.findUnique({ where: { id } });
 };
 
-export const findDriverById = async (id: string) => {
-  return prisma.driver.findUnique({ where: { id } });
+export const findCourierById = async (id: string) => {
+  return prisma.courier.findUnique({ where: { id } });
 };
 
-export const findVehicleById = async (id: string) => {
-  return prisma.vehicle.findUnique({ where: { id } });
-};
-
-export const findById = async (id: string) => {
+export const findDeliveryById = async (id: string) => {
   return prisma.delivery.findUnique({ where: { id } });
 };
 
-export const findAll = async () => {
+export const findAllDeliveries = async () => {
   return prisma.delivery.findMany();
 };
 
@@ -28,26 +24,17 @@ export const updateStatus = async (id: string, status: Status) => {
 
 export const createWithTransaction = async (data: CreateDeliveryTxInput) => {
   return prisma.$transaction(async (tx) => {
-    const driver = await tx.driver.updateMany({
-      where: { id: data.driverId, status: Status.AVAILABLE },
+    const courier = await tx.courier.updateMany({
+      where: { id: data.courierId, status: Status.AVAILABLE },
       data: { status: Status.IN_TRANSIT },
     });
-    if (driver.count === 0) {
+    if (courier.count === 0) {
       throw new AppError('Motorista indisponível', 409);
-    }
-    const vehicle = await tx.vehicle.updateMany({
-      where: { id: data.vehicleId, status: Status.AVAILABLE },
-      data: { status: Status.IN_TRANSIT },
-    });
-    if (vehicle.count === 0) {
-      throw new AppError('Veículo indisponível', 409);
     }
     const delivery = await tx.delivery.create({
       data: {
         routeId: data.routeId,
-        driverId: data.driverId,
-        vehicleId: data.vehicleId,
-        cargoWeight: data.cargoWeight,
+        courierId: data.courierId,
         freightCost: data.freightCost,
         trackingCode: data.trackingCode,
         status: Status.PENDING,
@@ -64,18 +51,10 @@ export const createWithTransaction = async (data: CreateDeliveryTxInput) => {
   });
 };
 
-export const finishWithTransaction = async (
-  deliveryId: string,
-  driverId: string,
-  vehicleId: string,
-) => {
+export const finishWithTransaction = async (courierId: string, deliveryId: string) => {
   return prisma.$transaction(async (tx) => {
-    const driver = await tx.driver.update({
-      where: { id: driverId },
-      data: { status: Status.AVAILABLE },
-    });
-    const vehicle = await tx.vehicle.update({
-      where: { id: vehicleId },
+    const courier = await tx.courier.update({
+      where: { id: courierId },
       data: { status: Status.AVAILABLE },
     });
     const delivery = await tx.delivery.update({
@@ -89,6 +68,6 @@ export const finishWithTransaction = async (
         description: 'Entrega finalizada com sucesso ao destinatário',
       },
     });
-    return { driver, vehicle, delivery, event };
+    return { courier, delivery, event };
   });
 };

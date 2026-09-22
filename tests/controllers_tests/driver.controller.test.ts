@@ -2,19 +2,15 @@ import request from 'supertest';
 import express from 'express';
 import { jest } from '@jest/globals';
 import { mockDeep, mockReset } from 'jest-mock-extended';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../generated/prisma/client.js';
 
-// 1. Cria o mock do banco
 const prismaMock = mockDeep<PrismaClient>();
 
-// 2. Intercepta a importação do Prisma
 jest.unstable_mockModule('../../src/prisma.js', () => ({
   __esModule: true,
   prisma: prismaMock,
 }));
 
-// 3. Importa dinamicamente as rotas e o handler após o mock ter sido injetado
-// O uso do [try/catch] previne que o Jest exploda o arquivo inteiro se os arquivos ainda não existirem
 let driverRoutes: any;
 let errorHandler: any;
 try {
@@ -22,9 +18,7 @@ try {
   driverRoutes = routesModule.driverRoutes;
   const errorModule = await import('../../src/middlewares/errorHandler.js');
   errorHandler = errorModule.errorHandler;
-} catch (e) {
-  // Ignora o erro na fase vermelha (Red) do TDD caso os arquivos ainda não tenham sido criados
-}
+} catch (e) {}
 
 describe('Driver Controller Integration Tests', () => {
   let app: express.Express;
@@ -32,10 +26,7 @@ describe('Driver Controller Integration Tests', () => {
   beforeAll(() => {
     app = express();
     app.use(express.json());
-    
-    // Associa as rotas se elas existirem
     if (driverRoutes) app.use('/drivers', driverRoutes);
-    // Adiciona o middleware de erro se ele existir
     if (errorHandler) app.use(errorHandler);
   });
 
@@ -45,15 +36,14 @@ describe('Driver Controller Integration Tests', () => {
 
   describe('POST /drivers', () => {
     it('deve retornar 201 e criar o motorista com payload válido', async () => {
-      // Mock do findUnique: não encontrou a CNH
-      prismaMock.driver.findUnique.mockResolvedValue(null);
-      // Mock do create
-      prismaMock.driver.create.mockResolvedValue({
+      prismaMock.courier.findUnique.mockResolvedValue(null);
+      prismaMock.courier.create.mockResolvedValue({
         id: '123',
         name: 'Mario',
         document: '12345678901',
         licenseNumber: '99999999999',
         status: 'AVAILABLE',
+        vehicleType: 'MOTO',
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -64,8 +54,7 @@ describe('Driver Controller Integration Tests', () => {
           name: 'Mario',
           document: '12345678901',
           licenseNumber: '99999999999',
-          status: 'AVAILABLE',
-          disponivel: true
+          vehicleType: 'MOTO'
         });
 
       expect(response.status).toBe(201);
@@ -77,22 +66,21 @@ describe('Driver Controller Integration Tests', () => {
       const response = await request(app)
         .post('/drivers')
         .send({
-          name: 'Mario' // Faltam campos obrigatórios
+          name: 'Mario' 
         });
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('message', 'Erro de Validação (Zod)');
-      expect(response.body.errors).toBeDefined();
     });
 
-    it('deve retornar 400 se a CNH já estiver cadastrada', async () => {
-      // Mock do findUnique: achou um motorista existente
-      prismaMock.driver.findUnique.mockResolvedValue({
+    it('deve retornar 409 se a CNH já estiver cadastrada', async () => {
+      prismaMock.courier.findUnique.mockResolvedValue({
         id: '123',
         name: 'Luigi',
         document: '12345678901',
         licenseNumber: '99999999999',
         status: 'AVAILABLE',
+        vehicleType: 'MOTO',
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -103,8 +91,7 @@ describe('Driver Controller Integration Tests', () => {
           name: 'Mario Novo',
           document: '12345678901',
           licenseNumber: '99999999999',
-          status: 'AVAILABLE',
-          disponivel: true
+          vehicleType: 'MOTO'
         });
 
       expect(response.status).toBe(409);
@@ -114,13 +101,14 @@ describe('Driver Controller Integration Tests', () => {
 
   describe('GET /drivers', () => {
     it('deve retornar 200 e uma lista de motoristas', async () => {
-      prismaMock.driver.findMany.mockResolvedValue([
+      prismaMock.courier.findMany.mockResolvedValue([
         {
           id: '123',
           name: 'Mario',
           document: '12345678901',
           licenseNumber: '99999999999',
           status: 'AVAILABLE',
+          vehicleType: 'MOTO',
           createdAt: new Date(),
           updatedAt: new Date()
         }

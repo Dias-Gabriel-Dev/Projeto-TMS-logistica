@@ -6,7 +6,6 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { disconnectDatabase } from './prisma.js';
 import { driverRoutes } from './routes/driver.routes.js';
-import { vehicleRoutes } from './routes/vehicle.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { routeRoutes } from './routes/route.routes.js';
 import { deliveryRoutes } from './routes/delivery.routes.js';
@@ -37,8 +36,7 @@ app.use('/auth', authRoutes);
 app.use('/tracking', trackingRoutes);
 
 // Rotas seguras
-app.use('/drivers', authMiddleware, driverRoutes);
-app.use('/vehicles', authMiddleware, vehicleRoutes);
+app.use('/couriers', authMiddleware, driverRoutes);
 app.use('/routes', authMiddleware, routeRoutes);
 app.use('/deliveries', authMiddleware, deliveryRoutes);
 

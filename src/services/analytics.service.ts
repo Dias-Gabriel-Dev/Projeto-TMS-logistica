@@ -3,10 +3,10 @@ import * as analyticsRepo from '../repositories/analytics.repository.js';
 import { Status } from '../prisma.js';
 
 export async function getDashboardMetrics(): Promise<DashBoardMetrics> {
-  const [activeDrivers, deliveriesByStatus, totalFreightRevenue, totalMileage, driverRanking] =
+  const [activeCouriers, deliveriesByStatus, totalFreightRevenue, totalMileage, courierRanking] =
     await Promise.all([
       // 1. Motoristas ativos por status
-      analyticsRepo.getDriversCountByStatus(),
+      analyticsRepo.getCouriersCountByStatus(),
 
       // 2. Entregas por status (incluindo PENDING)
       analyticsRepo.getDeliveriesCountsByStatus(),
@@ -18,7 +18,7 @@ export async function getDashboardMetrics(): Promise<DashBoardMetrics> {
       analyticsRepo.getDeliveriesWithRoutes(),
 
       // 5. Ranking de motoristas (top 10 por entregas concluídas)
-      analyticsRepo.getDriverRanking(),
+      analyticsRepo.getCourierRanking(),
     ]);
 
   const initialStatusCount = Object.values(Status).reduce(
@@ -30,9 +30,9 @@ export async function getDashboardMetrics(): Promise<DashBoardMetrics> {
   );
 
   // Converte os resultados agrupados para o formato de saída desejado
-  const activeDriversFormatted = activeDrivers.reduce(
-    (acc, driver) => {
-      acc[driver.status] = driver._count.id;
+  const activeCouriersFormatted = activeCouriers.reduce(
+    (acc, courier) => {
+      acc[courier.status] = courier._count.id;
       return acc;
     },
     { ...initialStatusCount },
@@ -46,16 +46,16 @@ export async function getDashboardMetrics(): Promise<DashBoardMetrics> {
     { ...initialStatusCount },
   );
 
-  const driverRankingFormatted = driverRanking.map((driver) => ({
-    driverId: driver.driverId,
-    completedDeliveries: driver._count.id,
+  const courierRankingFormatted = courierRanking.map((courier) => ({
+    courierId: courier.courierId,
+    completedDeliveries: courier._count.id,
   }));
 
   return {
-    activeDrivers: activeDriversFormatted,
+    activeCouriers: activeCouriersFormatted,
     deliveriesByStatus: deliveriesByStatusFormatted,
     totalMileage: totalMileage.reduce((acc, delivery) => acc + delivery.route.estimatedDistance, 0),
     totalFreightRevenue: totalFreightRevenue._sum.freightCost || 0,
-    driverRanking: driverRankingFormatted,
+    courierRanking: courierRankingFormatted,
   };
 }

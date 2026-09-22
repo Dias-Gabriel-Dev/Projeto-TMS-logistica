@@ -1,6 +1,5 @@
-export const calculateFreight = (estimatedDistance: number, cargoWeight: number): number => {
-  const baseCost = 50.0;
+export const calculateFreight = (estimatedDistance: number): number => {
+  const baseCost = 5.0;
   const costPerKm = 2.5;
-  const costPerKg = 0.5;
-  return baseCost + estimatedDistance * costPerKm + cargoWeight * costPerKg;
+  return baseCost + estimatedDistance * costPerKm;
 };
