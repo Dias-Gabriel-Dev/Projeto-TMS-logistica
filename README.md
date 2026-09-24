@@ -1,4 +1,4 @@
-# API Logística (TMS Local / Last Mile)
+# API Gerenciamento (TMS Local / Last Mile)
 
 API RESTful desenvolvida em Node.js e TypeScript focada em orquestração de entregas e despacho ágil (modelo Food Delivery / Last Mile). O sistema gerencia entregadores parceiros, rotas, despachos e fornece telemetria analítica com rigorosas regras de negócio, controle de concorrência e segurança de borda.
 
